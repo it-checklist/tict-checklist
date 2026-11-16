@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TICT IT Shift Engineer Daily Checklist</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- HTML2PDF for Local A4 PDF Generation (No Cloud PDF Storage) -->
+  <!-- HTML2PDF for Local Single-Page A4 PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <!-- Firebase v8 Compat SDKs for Direct Browser/GitHub Pages Hosting -->
+  <!-- Firebase v8 Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -21,8 +21,32 @@
       border: 1px solid #1e293b;
       border-collapse: collapse;
     }
+    .paper-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
     .double-divider-left {
       border-left: 3px double #1e293b !important;
+    }
+    /* Compact PDF export mode so all 10 sections fit sharply on 1 A4 sheet without slicing rows */
+    .pdf-compact-mode {
+      padding: 6px 10px !important;
+      font-size: 9px !important;
+      line-height: 1.15 !important;
+    }
+    .pdf-compact-mode td, .pdf-compact-mode th {
+      padding-top: 1.5px !important;
+      padding-bottom: 1.5px !important;
+      font-size: 9px !important;
+    }
+    .pdf-compact-mode input, .pdf-compact-mode select {
+      font-size: 9px !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      height: 14px !important;
+    }
+    .pdf-compact-mode .sig-box-row {
+      height: 44px !important;
     }
   </style>
 </head>
@@ -47,7 +71,7 @@
 
   <main class="max-w-7xl mx-auto p-4 md:p-6">
 
-    <!-- ==================== 1. AUTH GATEWAY (USERNAME & PASSWORD) ==================== -->
+    <!-- ==================== 1. AUTH GATEWAY ==================== -->
     <div id="viewAuth" class="max-w-md mx-auto my-10 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
       <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase">
         <button id="tabLogin" onclick="switchAuthTab('login')" class="py-3.5 text-blue-600 border-b-2 border-blue-600 bg-white">Sign In</button>
@@ -62,7 +86,7 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Username</label>
-          <input type="text" id="loginUsername" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Enter username (e.g. shift_eng)" />
+          <input type="text" id="loginUsername" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Enter username" />
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
@@ -106,7 +130,11 @@
           <h2 id="dashRoleTitle" class="text-lg font-bold text-slate-800">Daily Checklist Dashboard</h2>
           <p id="dashRoleSubtitle" class="text-xs text-slate-500">Live synchronized shift handover & approval queue</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Saved Signature Setup Button for Reviewer & Head -->
+          <button id="btnManageSig" onclick="openSignatureModal('profile')" class="hidden px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-900 text-white rounded-lg shadow transition">
+            ✍️ Set My Saved Signature
+          </button>
           <button id="btnNewChecklist" onclick="openNewChecklist()" class="hidden px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
             + Start New Daily Checklist (Day Shift)
           </button>
@@ -154,30 +182,30 @@
         <div id="formStatusPill" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700"></div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Reviewer Approval Button -->
-          <button id="btnApproveReviewer" onclick="updateApprovalStatus('Pending Head Approval')" class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow transition">
-            ✓ Approve & Forward to Head (Checked By)
+          <!-- Reviewer Approval Button (Opens Signature Modal) -->
+          <button id="btnApproveReviewer" onclick="initiateApprovalWithSignature('Pending Head Approval')" class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow transition">
+            ✍️ Sign & Forward to Head (Checked By)
           </button>
 
-          <!-- Head Final Approval Button -->
-          <button id="btnApproveHead" onclick="updateApprovalStatus('Head Approved')" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition">
-            ✓ Final Approve Checklist (Reviewed By)
+          <!-- Head Final Approval Button (Opens Signature Modal) -->
+          <button id="btnApproveHead" onclick="initiateApprovalWithSignature('Head Approved')" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition">
+            ✍️ Sign & Final Approve (Reviewed By)
           </button>
 
-          <!-- Local PDF Download Button (Available after Head Approval) -->
+          <!-- Local Single-Page A4 PDF Download Button -->
           <button id="btnDownloadPDF" onclick="downloadLocalPDF()" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
-            📥 Download A4 PDF (Local)
+            📥 Download Sharp A4 PDF
           </button>
         </div>
       </div>
 
-      <!-- Printable A4 Checklist Sheet (Matches Exact Paper Layout) -->
+      <!-- Printable A4 Checklist Sheet -->
       <div id="printableSheet" class="bg-white p-5 md:p-6 rounded-xl border border-slate-300 shadow-sm text-[11px] text-slate-900">
 
         <!-- Title Header -->
         <table class="w-full paper-table mb-0">
           <tr>
-            <th colspan="4" class="py-2 text-center text-sm font-bold uppercase tracking-wide bg-slate-50">
+            <th colspan="4" class="py-1.5 text-center text-sm font-bold uppercase tracking-wide bg-slate-50">
               TICT IT Shift Engineer Daily Checklist
             </th>
           </tr>
@@ -233,7 +261,7 @@
           </tr>
         </table>
 
-        <!-- Signatures Footer -->
+        <!-- Signatures Footer (Shows Actual Drawn/Uploaded Signatures for Reviewer & Head) -->
         <table class="w-full paper-table border-t-0 text-center">
           <tr class="bg-slate-50 font-bold text-[10px]">
             <td class="w-1/4 py-1">Day Shift Engineer Sign</td>
@@ -241,11 +269,11 @@
             <td class="w-1/4 py-1">Checked By (Reviewer)</td>
             <td class="w-1/4 py-1">Reviewed By (Head)</td>
           </tr>
-          <tr class="h-10 font-semibold text-[11px]">
-            <td id="sigDayEng" class="py-2 text-slate-700">—</td>
-            <td id="sigNightEng" class="py-2 text-slate-700">—</td>
-            <td id="sigReviewer" class="py-2 text-indigo-700">Pending</td>
-            <td id="sigHead" class="py-2 text-emerald-700">Pending</td>
+          <tr class="sig-box-row h-14 font-semibold text-[11px]">
+            <td id="sigDayEng" class="py-1 text-slate-800 align-middle">—</td>
+            <td id="sigNightEng" class="py-1 text-slate-800 align-middle">—</td>
+            <td id="sigReviewer" class="py-1 text-slate-800 align-middle">Pending</td>
+            <td id="sigHead" class="py-1 text-slate-800 align-middle">Pending</td>
           </tr>
         </table>
       </div>
@@ -265,6 +293,44 @@
 
     </div>
   </main>
+
+  <!-- ==================== 4. SIGNATURE PAD MODAL (DRAW OR UPLOAD PNG) ==================== -->
+  <div id="signatureModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-2.5">
+        <h3 id="sigModalTitle" class="font-bold text-base text-slate-800">Digital Signature</h3>
+        <button onclick="closeSignatureModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-500">Draw your signature below using your mouse/touchpad, or upload an image of your signature.</p>
+
+      <!-- Drawing Canvas -->
+      <div class="border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 relative">
+        <canvas id="sigCanvas" width="380" height="130" class="w-full h-32 cursor-crosshair touch-none"></canvas>
+        <button type="button" onclick="clearSignatureCanvas()" class="absolute top-1.5 right-1.5 bg-white border border-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded hover:bg-slate-100">
+          Clear
+        </button>
+      </div>
+
+      <!-- Optional Image Upload -->
+      <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
+        <span class="font-semibold text-slate-600">Or Upload Signature Image:</span>
+        <input type="file" id="sigFileInput" accept="image/*" onchange="loadSignatureImageFile(event)" class="text-[11px] w-44" />
+      </div>
+
+      <label class="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer">
+        <input type="checkbox" id="chkSaveDefaultSig" checked class="rounded" />
+        Save this signature to my account for one-click approvals next time
+      </label>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+        <button onclick="closeSignatureModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+        <button id="btnConfirmSig" onclick="confirmSignatureAction()" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow">
+          Apply Signature & Confirm
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // =========================================================================
@@ -377,11 +443,164 @@
     let currentUser = null;
     let currentUserRole = "";
     let currentUsername = "";
+    let savedUserSignature = "";
     let activeDocId = null;
     let unsubscribeRecords = null;
 
+    // Signature Modal State
+    let pendingModalAction = null; // 'profile' | 'approve'
+    let pendingTargetDocId = null;
+    let pendingNextStatus = null;
+    let hasDrawnOnCanvas = false;
+
     // =========================================================================
-    // 3. USERNAME + PASSWORD AUTHENTICATION (NO EMAIL NEEDED BY USER)
+    // 3. SIGNATURE PAD LOGIC (DRAW OR UPLOAD PNG)
+    // =========================================================================
+    const sigCanvas = document.getElementById("sigCanvas");
+    const sigCtx = sigCanvas.getContext("2d");
+    let isDrawing = false;
+
+    function initSignaturePad() {
+      sigCtx.strokeStyle = "#0f172a";
+      sigCtx.lineWidth = 2.2;
+      sigCtx.lineCap = "round";
+
+      const getPos = (e) => {
+        const rect = sigCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (sigCanvas.width / rect.width),
+          y: (clientY - rect.top) * (sigCanvas.height / rect.height)
+        };
+      };
+
+      const startDraw = (e) => {
+        isDrawing = true;
+        hasDrawnOnCanvas = true;
+        const pos = getPos(e);
+        sigCtx.beginPath();
+        sigCtx.moveTo(pos.x, pos.y);
+      };
+
+      const moveDraw = (e) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        sigCtx.lineTo(pos.x, pos.y);
+        sigCtx.stroke();
+      };
+
+      const endDraw = () => { isDrawing = false; };
+
+      sigCanvas.addEventListener("mousedown", startDraw);
+      sigCanvas.addEventListener("mousemove", moveDraw);
+      window.addEventListener("mouseup", endDraw);
+
+      sigCanvas.addEventListener("touchstart", startDraw, { passive: false });
+      sigCanvas.addEventListener("touchmove", moveDraw, { passive: false });
+      sigCanvas.addEventListener("touchend", endDraw);
+    }
+    initSignaturePad();
+
+    function clearSignatureCanvas() {
+      sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+      hasDrawnOnCanvas = false;
+      document.getElementById("sigFileInput").value = "";
+    }
+
+    function loadSignatureImageFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          clearSignatureCanvas();
+          const scale = Math.min(sigCanvas.width / img.width, sigCanvas.height / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          sigCtx.drawImage(img, (sigCanvas.width - w) / 2, (sigCanvas.height - h) / 2, w, h);
+          hasDrawnOnCanvas = true;
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openSignatureModal(mode, docId = null, nextStatus = null) {
+      pendingModalAction = mode;
+      pendingTargetDocId = docId;
+      pendingNextStatus = nextStatus;
+      clearSignatureCanvas();
+
+      // Pre-fill saved signature if available
+      if (savedUserSignature) {
+        const img = new Image();
+        img.onload = () => {
+          sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height);
+          hasDrawnOnCanvas = true;
+        };
+        img.src = savedUserSignature;
+      }
+
+      document.getElementById("sigModalTitle").textContent =
+        mode === "profile" ? `Set Saved Signature (${currentUserRole})` : `Sign to Approve (${currentUserRole})`;
+      document.getElementById("signatureModal").classList.remove("hidden");
+    }
+
+    function closeSignatureModal() {
+      document.getElementById("signatureModal").classList.add("hidden");
+    }
+
+    async function confirmSignatureAction() {
+      if (!hasDrawnOnCanvas) {
+        return alert("Please draw or upload your signature before confirming.");
+      }
+
+      // Export compact transparent PNG data URL
+      const sigDataUrl = sigCanvas.toDataURL("image/png");
+      const saveDefault = document.getElementById("chkSaveDefaultSig").checked;
+
+      if (saveDefault && currentUser) {
+        savedUserSignature = sigDataUrl;
+        await db.collection("tict_users").doc(currentUser.uid).set({
+          username: currentUsername,
+          role: currentUserRole,
+          signatureDataUrl: sigDataUrl
+        }, { merge: true });
+      }
+
+      if (pendingModalAction === "profile") {
+        closeSignatureModal();
+        alert("Your signature has been saved! It will automatically appear on checklists when you approve.");
+        return;
+      }
+
+      if (pendingModalAction === "approve" && pendingTargetDocId) {
+        const updateData = {
+          status: pendingNextStatus,
+          ...(pendingNextStatus === "Pending Head Approval"
+            ? { reviewerApprovedBy: currentUsername, reviewerSignature: sigDataUrl }
+            : { headApprovedBy: currentUsername, headSignature: sigDataUrl })
+        };
+
+        await db.collection("tict_daily_checklists").doc(pendingTargetDocId).update(updateData);
+        closeSignatureModal();
+        alert(`Signed and updated status to: ${pendingNextStatus}`);
+        if (!document.getElementById("viewForm").classList.contains("hidden")) {
+          openExistingChecklist(pendingTargetDocId);
+        }
+      }
+    }
+
+    function initiateApprovalWithSignature(nextStatus) {
+      if (!activeDocId) return;
+      openSignatureModal("approve", activeDocId, nextStatus);
+    }
+
+    // =========================================================================
+    // 4. USERNAME + PASSWORD AUTHENTICATION
     // =========================================================================
     function switchAuthTab(tab) {
       const isLogin = tab === "login";
@@ -479,13 +698,14 @@
       if (user) {
         currentUser = user;
         currentUsername = user.email.split("@")[0];
+        savedUserSignature = "";
         try {
           const userDoc = await db.collection("tict_users").doc(user.uid).get();
           if (userDoc.exists) {
             currentUserRole = userDoc.data().role;
             currentUsername = userDoc.data().username;
+            savedUserSignature = userDoc.data().signatureDataUrl || "";
           } else {
-            // Fallback role mapping if created directly in Firebase Console
             if (currentUsername.includes("rev")) currentUserRole = "Reviewer";
             else if (currentUsername.includes("head")) currentUserRole = "Head";
             else currentUserRole = "Shift Engineer";
@@ -510,15 +730,17 @@
     });
 
     // =========================================================================
-    // 4. DASHBOARD & REAL-TIME SYNC
+    // 5. DASHBOARD & REAL-TIME SYNC
     // =========================================================================
     function showDashboard() {
       document.getElementById("viewForm").classList.add("hidden");
       document.getElementById("viewDashboard").classList.remove("hidden");
 
       const isEngineer = currentUserRole === "Shift Engineer";
+      const isApprover = currentUserRole === "Reviewer" || currentUserRole === "Head";
       document.getElementById("btnNewChecklist").classList.toggle("hidden", !isEngineer);
       document.getElementById("engineerHelpBanner").classList.toggle("hidden", !isEngineer);
+      document.getElementById("btnManageSig").classList.toggle("hidden", !isApprover);
       document.getElementById("dashRoleTitle").textContent = `${currentUserRole} Dashboard`;
     }
 
@@ -555,9 +777,9 @@
             if (currentUserRole === "Shift Engineer" && d.status === "Awaiting Night Shift") {
               actionBtns = `<button onclick="openExistingChecklist('${id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow">Continue Night Shift →</button>`;
             } else if (currentUserRole === "Reviewer" && d.status === "Pending Review") {
-              actionBtns += ` <button onclick="quickApprove('${id}', 'Pending Head Approval')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow">✓ Approve</button>`;
+              actionBtns += ` <button onclick="openSignatureModal('approve', '${id}', 'Pending Head Approval')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow">✍️ Sign & Approve</button>`;
             } else if (currentUserRole === "Head" && d.status === "Pending Head Approval") {
-              actionBtns += ` <button onclick="quickApprove('${id}', 'Head Approved')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">✓ Final Approve</button>`;
+              actionBtns += ` <button onclick="openSignatureModal('approve', '${id}', 'Head Approved')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">✍️ Sign & Final Approve</button>`;
             }
 
             tbody.innerHTML += `
@@ -570,22 +792,11 @@
               </tr>
             `;
           });
-        }, (err) => {
-          document.getElementById("checklistTableBody").innerHTML =
-            `<tr><td colspan="5" class="p-6 text-center text-red-600">Firestore Permission Error: Ensure Firestore Rules allow authenticated read/write. (${err.message})</td></tr>`;
         });
     }
 
-    async function quickApprove(docId, nextStatus) {
-      if (!confirm(`Confirm approval and move status to "${nextStatus}"?`)) return;
-      await db.collection("tict_daily_checklists").doc(docId).update({
-        status: nextStatus,
-        ...(nextStatus === "Pending Head Approval" ? { reviewerApprovedBy: currentUsername } : { headApprovedBy: currentUsername })
-      });
-    }
-
     // =========================================================================
-    // 5. RENDER SPLIT-COLUMN PAPER TABLE (DAY [2 SUB-COLS] | NIGHT [2 SUB-COLS] | REMARK)
+    // 6. RENDER SPLIT-COLUMN PAPER TABLE & SIGNATURES
     // =========================================================================
     function renderChecklistTable() {
       const container = document.getElementById("checklistSectionsContainer");
@@ -595,10 +806,10 @@
         if (sec.showColHeaders) {
           html += `
             <tr class="bg-slate-100 font-bold text-center">
-              <td class="p-1.5 text-left w-[40%]">${sec.title}</td>
-              <td colspan="2" class="p-1.5 w-[20%]">Status (Day Shift)</td>
-              <td colspan="2" class="p-1.5 w-[20%] double-divider-left">Status (Night Shift)</td>
-              <td class="p-1.5 w-[20%]">Remark</td>
+              <td class="p-1 text-left w-[40%]">${sec.title}</td>
+              <td colspan="2" class="p-1 w-[20%]">Status (Day Shift)</td>
+              <td colspan="2" class="p-1 w-[20%] double-divider-left">Status (Night Shift)</td>
+              <td class="p-1 w-[20%]">Remark</td>
             </tr>
             <tr class="bg-slate-50 font-bold text-center text-[10px]">
               <td class="p-1 text-left">Task</td>
@@ -619,7 +830,7 @@
 
         sec.items.forEach((item, iIdx) => {
           const key = `s${sIdx}_i${iIdx}`;
-          html += `<tr><td class="px-2 py-1 font-medium">${item.label}</td>`;
+          html += `<tr><td class="px-2 py-0.5 font-medium">${item.label}</td>`;
 
           if (item.type === "ups_volts") {
             html += `
@@ -657,6 +868,15 @@
 
       html += `</table>`;
       container.innerHTML = html;
+    }
+
+    function renderSignatureCell(elementId, signatureDataUrl, fallbackText) {
+      const el = document.getElementById(elementId);
+      if (signatureDataUrl) {
+        el.innerHTML = `<img src="${signatureDataUrl}" alt="Signature" class="h-10 mx-auto object-contain" />`;
+      } else {
+        el.textContent = fallbackText;
+      }
     }
 
     function openNewChecklist() {
@@ -717,10 +937,11 @@
 
       document.getElementById("sigDayEng").textContent = d.dayEngName || "—";
       document.getElementById("sigNightEng").textContent = d.nightEngName || "—";
-      document.getElementById("sigReviewer").textContent =
-        (d.status === "Pending Head Approval" || d.status === "Head Approved") ? "Approved ✓" : "Pending";
-      document.getElementById("sigHead").textContent =
-        d.status === "Head Approved" ? "Approved ✓" : "Pending";
+
+      const revFallback = (d.status === "Pending Head Approval" || d.status === "Head Approved") ? "Approved ✓" : "Pending";
+      const headFallback = d.status === "Head Approved" ? "Approved ✓" : "Pending";
+      renderSignatureCell("sigReviewer", d.reviewerSignature, revFallback);
+      renderSignatureCell("sigHead", d.headSignature, headFallback);
 
       const canEngineerEdit = currentUserRole === "Shift Engineer" && (d.status === "Awaiting Night Shift" || d.status === "Draft");
       setFormEditable(canEngineerEdit);
@@ -818,34 +1039,67 @@
       }
     }
 
-    async function updateApprovalStatus(newStatus) {
-      if (!activeDocId) return;
-      try {
-        await db.collection("tict_daily_checklists").doc(activeDocId).update({
-          status: newStatus,
-          ...(newStatus === "Pending Head Approval" ? { reviewerApprovedBy: currentUsername } : { headApprovedBy: currentUsername })
-        });
-        alert(`Checklist updated to: ${newStatus}`);
-        showDashboard();
-      } catch (err) {
-        alert("Approval failed: " + err.message);
-      }
-    }
-
     // =========================================================================
-    // 6. LOCAL A4 PDF EXPORT (GENERATED IN BROWSER, NEVER SAVED IN CLOUD)
+    // 7. SHARP SINGLE-PAGE A4 PDF EXPORT (REPLACES INPUTS WITH CRISP TEXT)
     // =========================================================================
-    function downloadLocalPDF() {
-      const element = document.getElementById("printableSheet");
+    async function downloadLocalPDF() {
+      const original = document.getElementById("printableSheet");
       const dateStr = document.getElementById("fDate").value || "Daily";
+
+      // Clone the sheet so we can convert form <input>/<select> controls into crisp text nodes
+      const clone = original.cloneNode(true);
+      clone.classList.add("pdf-compact-mode");
+      clone.style.width = "760px";
+      clone.style.background = "#ffffff";
+
+      // Replace every <input> and <select> with clean static text so characters never clip
+      const origInputs = original.querySelectorAll("input, select");
+      const cloneInputs = clone.querySelectorAll("input, select");
+
+      origInputs.forEach((origEl, idx) => {
+        const cloneEl = cloneInputs[idx];
+        if (!cloneEl) return;
+
+        if (origEl.type === "checkbox") {
+          const mark = document.createElement("span");
+          mark.textContent = origEl.checked ? "☑ " : "☐ ";
+          mark.style.fontWeight = "bold";
+          cloneEl.parentNode.replaceChild(mark, cloneEl);
+        } else {
+          const span = document.createElement("span");
+          span.textContent = origEl.value || "";
+          span.style.display = "inline-block";
+          span.style.minHeight = "11px";
+          span.style.color = "#0f172a";
+          if (origEl.classList.contains("text-center")) {
+            span.style.width = "100%";
+            span.style.textAlign = "center";
+          }
+          cloneEl.parentNode.replaceChild(span, cloneEl);
+        }
+      });
+
+      // Temporarily mount off-screen for high-DPI rendering
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.left = "-9999px";
+      wrapper.style.top = "0";
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
       const opt = {
-        margin: 0.25,
+        margin: [0.18, 0.2, 0.18, 0.2],
         filename: `TICT_Shift_Checklist_${dateStr}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        image: { type: "jpeg", quality: 1.0 },
+        html2canvas: { scale: 2.5, useCORS: true, letterRendering: true },
         jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
       };
-      html2pdf().set(opt).from(element).save();
+
+      try {
+        await html2pdf().set(opt).from(clone).save();
+      } finally {
+        document.body.removeChild(wrapper);
+      }
     }
   </script>
 </body>
