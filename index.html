@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TICT IT Shift Engineer Daily Checklist</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTML2PDF for Local A4 PDF Generation (No Cloud PDF Storage) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Firebase v8 Compat SDKs for Direct Browser/GitHub Pages Hosting -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <style>
+    @media print {
+      body { background: white !important; }
+      .no-print { display: none !important; }
+      #printableSheet { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    }
+    .paper-table, .paper-table th, .paper-table td {
+      border: 1px solid #1e293b;
+      border-collapse: collapse;
+    }
+    .double-divider-left {
+      border-left: 3px double #1e293b !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 no-print">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg shadow">T</div>
+        <div>
+          <h1 class="font-bold text-base md:text-lg leading-tight">TICT IT Operations</h1>
+          <p class="text-[11px] text-slate-400">Shift Engineer Daily Checklist Portal</p>
+        </div>
+      </div>
+      <div id="headerUserArea" class="hidden flex items-center space-x-3">
+        <span id="headerUserBadge" class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30"></span>
+        <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white px-3 py-1.5 rounded transition">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 md:p-6">
+
+    <!-- ==================== 1. AUTH GATEWAY (USERNAME & PASSWORD) ==================== -->
+    <div id="viewAuth" class="max-w-md mx-auto my-10 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+      <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="py-3.5 text-blue-600 border-b-2 border-blue-600 bg-white">Sign In</button>
+        <button id="tabRegister" onclick="switchAuthTab('register')" class="py-3.5 text-slate-500 hover:text-slate-800">Register Account</button>
+      </div>
+
+      <!-- Sign In Panel -->
+      <div id="panelLogin" class="p-6 space-y-4">
+        <div class="text-center mb-2">
+          <h2 class="text-xl font-bold text-slate-800">System Gateway</h2>
+          <p class="text-xs text-slate-500 mt-1">Sign in with your Username & Password</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Username</label>
+          <input type="text" id="loginUsername" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Enter username (e.g. shift_eng)" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
+          <input type="password" id="loginPassword" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="••••••••" />
+        </div>
+        <button id="btnSignIn" onclick="handleSignIn()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow transition">Sign In</button>
+        <p id="loginError" class="text-red-600 text-xs text-center hidden font-medium"></p>
+      </div>
+
+      <!-- Register Panel -->
+      <div id="panelRegister" class="p-6 space-y-4 hidden">
+        <div class="text-center mb-2">
+          <h2 class="text-xl font-bold text-slate-800">Create Account</h2>
+          <p class="text-xs text-slate-500 mt-1">Register your custom username and role</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Choose Username</label>
+          <input type="text" id="regUsername" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="e.g. shift_eng, reviewer, head" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Password (Min 6 characters)</label>
+          <input type="password" id="regPassword" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Create password" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Assign Role</label>
+          <select id="regRole" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+            <option value="Shift Engineer">Shift Engineer (Shared Day/Night Login)</option>
+            <option value="Reviewer">Reviewer (Checked By)</option>
+            <option value="Head">Head (Reviewed By / Final Approval)</option>
+          </select>
+        </div>
+        <button id="btnRegister" onclick="handleRegister()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow transition">Register & Enter Portal</button>
+        <p id="regError" class="text-red-600 text-xs text-center hidden font-medium"></p>
+      </div>
+    </div>
+
+    <!-- ==================== 2. DASHBOARD VIEW ==================== -->
+    <div id="viewDashboard" class="hidden space-y-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <div>
+          <h2 id="dashRoleTitle" class="text-lg font-bold text-slate-800">Daily Checklist Dashboard</h2>
+          <p id="dashRoleSubtitle" class="text-xs text-slate-500">Live synchronized shift handover & approval queue</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnNewChecklist" onclick="openNewChecklist()" class="hidden px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
+            + Start New Daily Checklist (Day Shift)
+          </button>
+        </div>
+      </div>
+
+      <!-- Handover Instructions Banner for Shift Engineers -->
+      <div id="engineerHelpBanner" class="hidden bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl text-xs flex items-start gap-2.5">
+        <span class="font-bold text-sm">ℹ️</span>
+        <div>
+          <strong>Shift Handover Rule:</strong> Day Shift Engineer starts a new daily checklist and saves it as <em>"Awaiting Night Shift"</em>. When the Night Shift Engineer arrives, click <strong>"Continue Night Shift"</strong> on that same date's row instead of creating a new one. If a shift engineer is absent, use <strong>"Submit to Reviewer Now (Single Shift Override)"</strong> inside the form.
+        </div>
+      </div>
+
+      <!-- Records Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
+                <th class="p-3">Date</th>
+                <th class="p-3">Day Shift Engineer Name</th>
+                <th class="p-3">Night Shift Engineer Name</th>
+                <th class="p-3">Workflow Status</th>
+                <th class="p-3 text-right">Actions & Approvals</th>
+              </tr>
+            </thead>
+            <tbody id="checklistTableBody" class="divide-y divide-slate-100 text-xs">
+              <tr><td colspan="5" class="p-8 text-center text-slate-400">Connecting to live database...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 3. CHECKLIST FORM / SHEET VIEW ==================== -->
+    <div id="viewForm" class="hidden max-w-5xl mx-auto space-y-4">
+
+      <!-- Top Action & Approval Bar -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3 no-print">
+        <button onclick="showDashboard()" class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          ← Back to Dashboard
+        </button>
+
+        <div id="formStatusPill" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700"></div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Reviewer Approval Button -->
+          <button id="btnApproveReviewer" onclick="updateApprovalStatus('Pending Head Approval')" class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow transition">
+            ✓ Approve & Forward to Head (Checked By)
+          </button>
+
+          <!-- Head Final Approval Button -->
+          <button id="btnApproveHead" onclick="updateApprovalStatus('Head Approved')" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition">
+            ✓ Final Approve Checklist (Reviewed By)
+          </button>
+
+          <!-- Local PDF Download Button (Available after Head Approval) -->
+          <button id="btnDownloadPDF" onclick="downloadLocalPDF()" class="hidden px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
+            📥 Download A4 PDF (Local)
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable A4 Checklist Sheet (Matches Exact Paper Layout) -->
+      <div id="printableSheet" class="bg-white p-5 md:p-6 rounded-xl border border-slate-300 shadow-sm text-[11px] text-slate-900">
+
+        <!-- Title Header -->
+        <table class="w-full paper-table mb-0">
+          <tr>
+            <th colspan="4" class="py-2 text-center text-sm font-bold uppercase tracking-wide bg-slate-50">
+              TICT IT Shift Engineer Daily Checklist
+            </th>
+          </tr>
+          <tr>
+            <td class="p-1.5 w-1/4 font-bold">
+              📅 Date: <input type="date" id="fDate" class="border-b border-slate-400 px-1 py-0.5 text-[11px] font-normal bg-transparent focus:outline-none" />
+            </td>
+            <td class="p-1.5 w-[37.5%] font-bold">
+              👤 Day Shift Engineer Name:
+              <input type="text" id="fDayEngName" placeholder="Enter Day Engineer Name" class="w-full mt-0.5 border-b border-slate-400 px-1 py-0.5 text-[11px] font-normal bg-transparent focus:outline-none" />
+            </td>
+            <td colspan="2" class="p-1.5 w-[37.5%] font-bold">
+              👤 Night Shift Engineer Name:
+              <input type="text" id="fNightEngName" placeholder="Enter Night Engineer Name" class="w-full mt-0.5 border-b border-slate-400 px-1 py-0.5 text-[11px] font-normal bg-transparent focus:outline-none" />
+            </td>
+          </tr>
+          <tr>
+            <td class="p-1.5 font-bold">🕒 Shift Coverage:</td>
+            <td colspan="3" class="p-1.5 font-semibold">
+              <label class="inline-flex items-center mr-6 cursor-pointer">
+                <input type="checkbox" id="chkDayShift" class="mr-1.5 w-3.5 h-3.5" /> Day Shift Completed
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="chkNightShift" class="mr-1.5 w-3.5 h-3.5" /> Night Shift Completed
+              </label>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Dynamic Sections 1 to 9 -->
+        <div id="checklistSectionsContainer"></div>
+
+        <!-- Section 10: Notes / Observations -->
+        <table class="w-full paper-table border-t-0">
+          <tr>
+            <td colspan="4" class="bg-slate-100 font-bold px-2 py-1 text-[11px]">10. Notes / Observations</td>
+          </tr>
+          <tr>
+            <td class="w-6 text-center font-semibold">1</td>
+            <td colspan="3" class="p-0.5"><input type="text" id="note1" class="w-full px-1.5 py-0.5 text-[11px] focus:outline-none" /></td>
+          </tr>
+          <tr>
+            <td class="w-6 text-center font-semibold">2</td>
+            <td colspan="3" class="p-0.5"><input type="text" id="note2" class="w-full px-1.5 py-0.5 text-[11px] focus:outline-none" /></td>
+          </tr>
+          <tr>
+            <td class="w-6 text-center font-semibold">3</td>
+            <td colspan="3" class="p-0.5"><input type="text" id="note3" class="w-full px-1.5 py-0.5 text-[11px] focus:outline-none" /></td>
+          </tr>
+          <tr>
+            <td class="w-6 text-center font-semibold">4</td>
+            <td colspan="3" class="p-0.5"><input type="text" id="note4" class="w-full px-1.5 py-0.5 text-[11px] focus:outline-none" /></td>
+          </tr>
+        </table>
+
+        <!-- Signatures Footer -->
+        <table class="w-full paper-table border-t-0 text-center">
+          <tr class="bg-slate-50 font-bold text-[10px]">
+            <td class="w-1/4 py-1">Day Shift Engineer Sign</td>
+            <td class="w-1/4 py-1">Night Shift Engineer Sign</td>
+            <td class="w-1/4 py-1">Checked By (Reviewer)</td>
+            <td class="w-1/4 py-1">Reviewed By (Head)</td>
+          </tr>
+          <tr class="h-10 font-semibold text-[11px]">
+            <td id="sigDayEng" class="py-2 text-slate-700">—</td>
+            <td id="sigNightEng" class="py-2 text-slate-700">—</td>
+            <td id="sigReviewer" class="py-2 text-indigo-700">Pending</td>
+            <td id="sigHead" class="py-2 text-emerald-700">Pending</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Shift Engineer Action Buttons Footer -->
+      <div id="engineerSubmitBar" class="hidden bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-end items-center gap-3 no-print">
+        <button onclick="saveChecklistRecord('Awaiting Night Shift')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow transition">
+          1. Save Day Shift Only (Await Night Shift)
+        </button>
+        <button onclick="saveChecklistRecord('Pending Review', true)" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow transition" title="Use this if Day or Night engineer is absent">
+          ⚡ Submit to Reviewer Now (Single Shift / Absent Override)
+        </button>
+        <button onclick="saveChecklistRecord('Pending Review', false)" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow transition">
+          2. Complete Day + Night & Submit to Reviewer ✓
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. LIVE FIREBASE CONFIGURATION (tict-checklist)
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBo36cwcQnnxppFs9qdJ3MzC0XKTD3Mfdc",
+      authDomain: "tict-checklist.firebaseapp.com",
+      projectId: "tict-checklist",
+      storageBucket: "tict-checklist.firebasestorage.app",
+      messagingSenderId: "846535991265",
+      appId: "1:846535991265:web:3edd30456699da5f2c7ca0",
+      measurementId: "G-1C60VFT40K"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // =========================================================================
+    // 2. EXACT PAPER CHECKLIST STRUCTURE (SECTIONS 1 TO 9)
+    // =========================================================================
+    const CHECKLIST_SECTIONS = [
+      {
+        title: "1. Shift Handover",
+        showColHeaders: true,
+        items: [
+          { label: "Review previous shift's log", type: "status" },
+          { label: "Review open incidents/tickets - Ask IT", type: "status" },
+          { label: "Confirm Pending hardware/network issues", type: "status" }
+        ]
+      },
+      {
+        title: "2. Network Devices Health Check",
+        items: [
+          { label: "Firewalls Primary (Palo Alto PA-440) / WAN link", type: "status" },
+          { label: "Firewalls Secondary (Palo Alto PA-440) / WAN", type: "status" },
+          { label: "Primary ISP BSNL 117.250.250.33/34 - Ping Status", type: "status" },
+          { label: "Secondary ISP Lobatel 103.160.240.182 - Ping", type: "status" },
+          { label: "Core Switches 1 - C9500-24Y4 / All link status", type: "status" },
+          { label: "Core Switches 2 - C9500-24Y4 / All link status", type: "status" },
+          { label: "Distribution Switches 1 C9300X-24Y", type: "status" },
+          { label: "Distribution Switches 2 C9300X-24Y", type: "status" },
+          { label: "Access Switches (Yard, Gate, Admin)", type: "status" },
+          { label: "Wi-Fi Access Points (HM-03,06,07,10,11,13) / Altai & Associate with Clients Yard RTG & HHT", type: "status" },
+          { label: "Server Room & UPS Room - AC Temp / Status", type: "temp" }
+        ]
+      },
+      {
+        title: "3. Security & Surveillance Systems",
+        items: [
+          { label: "Check CCTV camera (yard, gate, admin & Customs)", type: "status" },
+          { label: "NVR (Axis - 10.11.2.10 recording status)", type: "status" }
+        ]
+      },
+      {
+        title: "4. Terminal Operating Systems (TOS)",
+        items: [
+          { label: "TOS IP ping and TTL (10.1.190.16 & 17)", type: "status" },
+          { label: "Putty (10.1.190.15)", type: "status" },
+          { label: "Putty (10.1.190.16)", type: "status" },
+          { label: "Putty (10.1.190.17)", type: "status" },
+          { label: "Confirm with TOS link RS, RTGs, HHTs, / TOS App", type: "status" },
+          { label: "External User TOS access Link", type: "status" },
+          { label: "EVGM - FTP server files (codex - Odex)", type: "status" }
+        ]
+      },
+      {
+        title: "5. UPS Monitoring & Alerting",
+        items: [
+          { label: "Server Room - Admin UPS 1 IN / OUT Volts", type: "ups_volts" },
+          { label: "UPS Load / Charging %", type: "ups_pct" },
+          { label: "Server Room - Gate Complex UPS 2 IN / OUT Volts", type: "ups_volts" },
+          { label: "UPS Load / Charging %", type: "ups_pct" }
+        ]
+      },
+      {
+        title: "6. Printer Monitoring & Alerting",
+        items: [
+          { label: "OPS - Konica Printer - 10.11.1.20", type: "status" },
+          { label: "Admin - Konica Printer - 10.11.1.18", type: "status" },
+          { label: "Customs Printronix Printer", type: "status" }
+        ]
+      },
+      {
+        title: "7. Communication & Collaboration Systems",
+        items: [
+          { label: "Check email and messaging systems Cisco ATP", type: "status" },
+          { label: "Confirm IP telephones communications", type: "status" }
+        ]
+      },
+      {
+        title: "8. TV & VC Systems",
+        items: [
+          { label: "Admin Conference Room TV and VC", type: "status" },
+          { label: "First Floor Conference Room TV and VC", type: "status" },
+          { label: "Visitor Room TV", type: "status" }
+        ]
+      },
+      {
+        title: "9. Monitoring & Alerting",
+        items: [
+          { label: "Review logs from Sophos antivirus", type: "status" }
+        ]
+      }
+    ];
+
+    let currentUser = null;
+    let currentUserRole = "";
+    let currentUsername = "";
+    let activeDocId = null;
+    let unsubscribeRecords = null;
+
+    // =========================================================================
+    // 3. USERNAME + PASSWORD AUTHENTICATION (NO EMAIL NEEDED BY USER)
+    // =========================================================================
+    function switchAuthTab(tab) {
+      const isLogin = tab === "login";
+      document.getElementById("panelLogin").classList.toggle("hidden", !isLogin);
+      document.getElementById("panelRegister").classList.toggle("hidden", isLogin);
+
+      document.getElementById("tabLogin").className = isLogin
+        ? "py-3.5 text-blue-600 border-b-2 border-blue-600 bg-white"
+        : "py-3.5 text-slate-500 hover:text-slate-800";
+      document.getElementById("tabRegister").className = !isLogin
+        ? "py-3.5 text-emerald-600 border-b-2 border-emerald-600 bg-white"
+        : "py-3.5 text-slate-500 hover:text-slate-800";
+    }
+
+    function usernameToFirebaseEmail(rawUsername) {
+      const clean = rawUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+      return `${clean}@tict.local`;
+    }
+
+    async function handleRegister() {
+      const rawUser = document.getElementById("regUsername").value.trim();
+      const pass = document.getElementById("regPassword").value;
+      const role = document.getElementById("regRole").value;
+      const errEl = document.getElementById("regError");
+      errEl.classList.add("hidden");
+
+      if (!rawUser || rawUser.length < 3) {
+        errEl.textContent = "Username must be at least 3 characters.";
+        errEl.classList.remove("hidden");
+        return;
+      }
+      if (!pass || pass.length < 6) {
+        errEl.textContent = "Password must be at least 6 characters.";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      const btn = document.getElementById("btnRegister");
+      btn.disabled = true;
+      btn.textContent = "Creating Account...";
+
+      try {
+        const fakeEmail = usernameToFirebaseEmail(rawUser);
+        const cred = await auth.createUserWithEmailAndPassword(fakeEmail, pass);
+        await db.collection("tict_users").doc(cred.user.uid).set({
+          username: rawUser.toLowerCase(),
+          role: role,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (err) {
+        errEl.textContent = err.code === "auth/email-already-in-use"
+          ? "This username is already registered. Please Sign In."
+          : err.message;
+        errEl.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Register & Enter Portal";
+      }
+    }
+
+    async function handleSignIn() {
+      const rawUser = document.getElementById("loginUsername").value.trim();
+      const pass = document.getElementById("loginPassword").value;
+      const errEl = document.getElementById("loginError");
+      errEl.classList.add("hidden");
+
+      if (!rawUser || !pass) {
+        errEl.textContent = "Please enter both username and password.";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      const btn = document.getElementById("btnSignIn");
+      btn.disabled = true;
+      btn.textContent = "Signing In...";
+
+      try {
+        const fakeEmail = usernameToFirebaseEmail(rawUser);
+        await auth.signInWithEmailAndPassword(fakeEmail, pass);
+      } catch (err) {
+        errEl.textContent = "Invalid username or password.";
+        errEl.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+      }
+    }
+
+    function handleLogout() {
+      if (unsubscribeRecords) unsubscribeRecords();
+      auth.signOut();
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        currentUsername = user.email.split("@")[0];
+        try {
+          const userDoc = await db.collection("tict_users").doc(user.uid).get();
+          if (userDoc.exists) {
+            currentUserRole = userDoc.data().role;
+            currentUsername = userDoc.data().username;
+          } else {
+            // Fallback role mapping if created directly in Firebase Console
+            if (currentUsername.includes("rev")) currentUserRole = "Reviewer";
+            else if (currentUsername.includes("head")) currentUserRole = "Head";
+            else currentUserRole = "Shift Engineer";
+          }
+        } catch (e) {
+          currentUserRole = "Shift Engineer";
+        }
+
+        document.getElementById("headerUserArea").classList.remove("hidden");
+        document.getElementById("headerUserBadge").textContent = `${currentUserRole}: ${currentUsername}`;
+        document.getElementById("viewAuth").classList.add("hidden");
+        showDashboard();
+        listenToChecklists();
+      } else {
+        currentUser = null;
+        currentUserRole = "";
+        document.getElementById("headerUserArea").classList.add("hidden");
+        document.getElementById("viewDashboard").classList.add("hidden");
+        document.getElementById("viewForm").classList.add("hidden");
+        document.getElementById("viewAuth").classList.remove("hidden");
+      }
+    });
+
+    // =========================================================================
+    // 4. DASHBOARD & REAL-TIME SYNC
+    // =========================================================================
+    function showDashboard() {
+      document.getElementById("viewForm").classList.add("hidden");
+      document.getElementById("viewDashboard").classList.remove("hidden");
+
+      const isEngineer = currentUserRole === "Shift Engineer";
+      document.getElementById("btnNewChecklist").classList.toggle("hidden", !isEngineer);
+      document.getElementById("engineerHelpBanner").classList.toggle("hidden", !isEngineer);
+      document.getElementById("dashRoleTitle").textContent = `${currentUserRole} Dashboard`;
+    }
+
+    function listenToChecklists() {
+      if (unsubscribeRecords) unsubscribeRecords();
+      unsubscribeRecords = db.collection("tict_daily_checklists")
+        .orderBy("date", "desc")
+        .onSnapshot((snapshot) => {
+          const tbody = document.getElementById("checklistTableBody");
+          tbody.innerHTML = "";
+
+          if (snapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No checklists recorded yet. Shift Engineer can start today's checklist above.</td></tr>`;
+            return;
+          }
+
+          snapshot.forEach((doc) => {
+            const d = doc.data();
+            const id = doc.id;
+
+            let badgeHtml = "";
+            if (d.status === "Awaiting Night Shift") {
+              badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">⏳ Day Done (Awaiting Night)</span>`;
+            } else if (d.status === "Pending Review") {
+              badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800">📋 Pending Reviewer</span>`;
+            } else if (d.status === "Pending Head Approval") {
+              badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">🔍 Pending Head Approval</span>`;
+            } else if (d.status === "Head Approved") {
+              badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">✅ Head Approved (PDF Ready)</span>`;
+            }
+
+            let actionBtns = `<button onclick="openExistingChecklist('${id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-semibold">Open Sheet</button>`;
+
+            if (currentUserRole === "Shift Engineer" && d.status === "Awaiting Night Shift") {
+              actionBtns = `<button onclick="openExistingChecklist('${id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold shadow">Continue Night Shift →</button>`;
+            } else if (currentUserRole === "Reviewer" && d.status === "Pending Review") {
+              actionBtns += ` <button onclick="quickApprove('${id}', 'Pending Head Approval')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow">✓ Approve</button>`;
+            } else if (currentUserRole === "Head" && d.status === "Pending Head Approval") {
+              actionBtns += ` <button onclick="quickApprove('${id}', 'Head Approved')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow">✓ Final Approve</button>`;
+            }
+
+            tbody.innerHTML += `
+              <tr class="hover:bg-slate-50 transition">
+                <td class="p-3 font-bold text-slate-800">${d.date || "-"}</td>
+                <td class="p-3 text-slate-700">${d.dayEngName || "<span class='text-slate-400 italic'>Pending / Absent</span>"}</td>
+                <td class="p-3 text-slate-700">${d.nightEngName || "<span class='text-slate-400 italic'>Pending / Absent</span>"}</td>
+                <td class="p-3">${badgeHtml}</td>
+                <td class="p-3 text-right space-x-1">${actionBtns}</td>
+              </tr>
+            `;
+          });
+        }, (err) => {
+          document.getElementById("checklistTableBody").innerHTML =
+            `<tr><td colspan="5" class="p-6 text-center text-red-600">Firestore Permission Error: Ensure Firestore Rules allow authenticated read/write. (${err.message})</td></tr>`;
+        });
+    }
+
+    async function quickApprove(docId, nextStatus) {
+      if (!confirm(`Confirm approval and move status to "${nextStatus}"?`)) return;
+      await db.collection("tict_daily_checklists").doc(docId).update({
+        status: nextStatus,
+        ...(nextStatus === "Pending Head Approval" ? { reviewerApprovedBy: currentUsername } : { headApprovedBy: currentUsername })
+      });
+    }
+
+    // =========================================================================
+    // 5. RENDER SPLIT-COLUMN PAPER TABLE (DAY [2 SUB-COLS] | NIGHT [2 SUB-COLS] | REMARK)
+    // =========================================================================
+    function renderChecklistTable() {
+      const container = document.getElementById("checklistSectionsContainer");
+      let html = `<table class="w-full paper-table border-t-0 text-[11px]">`;
+
+      CHECKLIST_SECTIONS.forEach((sec, sIdx) => {
+        if (sec.showColHeaders) {
+          html += `
+            <tr class="bg-slate-100 font-bold text-center">
+              <td class="p-1.5 text-left w-[40%]">${sec.title}</td>
+              <td colspan="2" class="p-1.5 w-[20%]">Status (Day Shift)</td>
+              <td colspan="2" class="p-1.5 w-[20%] double-divider-left">Status (Night Shift)</td>
+              <td class="p-1.5 w-[20%]">Remark</td>
+            </tr>
+            <tr class="bg-slate-50 font-bold text-center text-[10px]">
+              <td class="p-1 text-left">Task</td>
+              <td class="p-1 w-[10%]">Check / IN</td>
+              <td class="p-1 w-[10%]">Cond / OUT</td>
+              <td class="p-1 w-[10%] double-divider-left">Check / IN</td>
+              <td class="p-1 w-[10%]">Cond / OUT</td>
+              <td class="p-1"></td>
+            </tr>
+          `;
+        } else {
+          html += `
+            <tr class="bg-slate-100 font-bold">
+              <td colspan="6" class="px-2 py-1">${sec.title}</td>
+            </tr>
+          `;
+        }
+
+        sec.items.forEach((item, iIdx) => {
+          const key = `s${sIdx}_i${iIdx}`;
+          html += `<tr><td class="px-2 py-1 font-medium">${item.label}</td>`;
+
+          if (item.type === "ups_volts") {
+            html += `
+              <td class="p-0.5"><input type="text" id="${key}_d1" placeholder="IN V" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><input type="text" id="${key}_d2" placeholder="OUT V" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5 double-divider-left"><input type="text" id="${key}_n1" placeholder="IN V" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><input type="text" id="${key}_n2" placeholder="OUT V" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+            `;
+          } else if (item.type === "ups_pct") {
+            html += `
+              <td class="p-0.5"><input type="text" id="${key}_d1" placeholder="Load %" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><input type="text" id="${key}_d2" placeholder="Chg %" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5 double-divider-left"><input type="text" id="${key}_n1" placeholder="Load %" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><input type="text" id="${key}_n2" placeholder="Chg %" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+            `;
+          } else if (item.type === "temp") {
+            html += `
+              <td class="p-0.5"><input type="text" id="${key}_d1" placeholder="Temp °C" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><select id="${key}_d2" class="w-full text-center text-[10px] py-0.5 bg-transparent"><option value=""></option><option value="OK">OK</option><option value="NOT OK">NOT OK</option></select></td>
+              <td class="p-0.5 double-divider-left"><input type="text" id="${key}_n1" placeholder="Temp °C" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5"><select id="${key}_n2" class="w-full text-center text-[10px] py-0.5 bg-transparent"><option value=""></option><option value="OK">OK</option><option value="NOT OK">NOT OK</option></select></td>
+            `;
+          } else {
+            html += `
+              <td class="p-0.5"><select id="${key}_d1" class="w-full text-center text-[10px] py-0.5 bg-transparent"><option value=""></option><option value="OK">OK</option><option value="NOT OK">NOT OK</option><option value="N/A">N/A</option></select></td>
+              <td class="p-0.5"><input type="text" id="${key}_d2" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+              <td class="p-0.5 double-divider-left"><select id="${key}_n1" class="w-full text-center text-[10px] py-0.5 bg-transparent"><option value=""></option><option value="OK">OK</option><option value="NOT OK">NOT OK</option><option value="N/A">N/A</option></select></td>
+              <td class="p-0.5"><input type="text" id="${key}_n2" class="w-full text-center text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td>
+            `;
+          }
+
+          html += `<td class="p-0.5"><input type="text" id="${key}_rem" class="w-full px-1 text-[10px] py-0.5 focus:bg-blue-50 focus:outline-none" /></td></tr>`;
+        });
+      });
+
+      html += `</table>`;
+      container.innerHTML = html;
+    }
+
+    function openNewChecklist() {
+      activeDocId = null;
+      renderChecklistTable();
+
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("fDate").value = today;
+      document.getElementById("fDayEngName").value = "";
+      document.getElementById("fNightEngName").value = "";
+      document.getElementById("chkDayShift").checked = true;
+      document.getElementById("chkNightShift").checked = false;
+      ["note1", "note2", "note3", "note4"].forEach(id => document.getElementById(id).value = "");
+
+      document.getElementById("sigDayEng").textContent = "—";
+      document.getElementById("sigNightEng").textContent = "—";
+      document.getElementById("sigReviewer").textContent = "Pending";
+      document.getElementById("sigHead").textContent = "Pending";
+
+      setFormEditable(true);
+      updateFormActionButtons("Draft");
+
+      document.getElementById("viewDashboard").classList.add("hidden");
+      document.getElementById("viewForm").classList.remove("hidden");
+    }
+
+    async function openExistingChecklist(docId) {
+      activeDocId = docId;
+      renderChecklistTable();
+
+      const snap = await db.collection("tict_daily_checklists").doc(docId).get();
+      if (!snap.exists) return;
+      const d = snap.data();
+
+      document.getElementById("fDate").value = d.date || "";
+      document.getElementById("fDayEngName").value = d.dayEngName || "";
+      document.getElementById("fNightEngName").value = d.nightEngName || "";
+      document.getElementById("chkDayShift").checked = !!d.dayCompleted;
+      document.getElementById("chkNightShift").checked = !!d.nightCompleted;
+
+      document.getElementById("note1").value = d.note1 || "";
+      document.getElementById("note2").value = d.note2 || "";
+      document.getElementById("note3").value = d.note3 || "";
+      document.getElementById("note4").value = d.note4 || "";
+
+      const entries = d.entries || {};
+      CHECKLIST_SECTIONS.forEach((sec, sIdx) => {
+        sec.items.forEach((_, iIdx) => {
+          const key = `s${sIdx}_i${iIdx}`;
+          const row = entries[key] || {};
+          document.getElementById(`${key}_d1`).value = row.d1 || "";
+          document.getElementById(`${key}_d2`).value = row.d2 || "";
+          document.getElementById(`${key}_n1`).value = row.n1 || "";
+          document.getElementById(`${key}_n2`).value = row.n2 || "";
+          document.getElementById(`${key}_rem`).value = row.rem || "";
+        });
+      });
+
+      document.getElementById("sigDayEng").textContent = d.dayEngName || "—";
+      document.getElementById("sigNightEng").textContent = d.nightEngName || "—";
+      document.getElementById("sigReviewer").textContent =
+        (d.status === "Pending Head Approval" || d.status === "Head Approved") ? "Approved ✓" : "Pending";
+      document.getElementById("sigHead").textContent =
+        d.status === "Head Approved" ? "Approved ✓" : "Pending";
+
+      const canEngineerEdit = currentUserRole === "Shift Engineer" && (d.status === "Awaiting Night Shift" || d.status === "Draft");
+      setFormEditable(canEngineerEdit);
+      updateFormActionButtons(d.status);
+
+      document.getElementById("viewDashboard").classList.add("hidden");
+      document.getElementById("viewForm").classList.remove("hidden");
+    }
+
+    function setFormEditable(editable) {
+      const sheet = document.getElementById("printableSheet");
+      sheet.querySelectorAll("input, select").forEach(el => {
+        el.disabled = !editable;
+      });
+    }
+
+    function updateFormActionButtons(status) {
+      document.getElementById("formStatusPill").textContent = `Status: ${status}`;
+
+      document.getElementById("engineerSubmitBar").classList.toggle(
+        "hidden",
+        !(currentUserRole === "Shift Engineer" && (status === "Draft" || status === "Awaiting Night Shift"))
+      );
+      document.getElementById("btnApproveReviewer").classList.toggle(
+        "hidden",
+        !(currentUserRole === "Reviewer" && status === "Pending Review")
+      );
+      document.getElementById("btnApproveHead").classList.toggle(
+        "hidden",
+        !(currentUserRole === "Head" && status === "Pending Head Approval")
+      );
+      document.getElementById("btnDownloadPDF").classList.toggle(
+        "hidden",
+        status !== "Head Approved"
+      );
+    }
+
+    async function saveChecklistRecord(targetStatus, isOverride = false) {
+      const dateVal = document.getElementById("fDate").value;
+      const dayEng = document.getElementById("fDayEngName").value.trim();
+      const nightEng = document.getElementById("fNightEngName").value.trim();
+
+      if (!dateVal) return alert("Please select the Date.");
+      if (targetStatus === "Awaiting Night Shift" && !dayEng) {
+        return alert("Please enter the Day Shift Engineer Name before saving.");
+      }
+      if (targetStatus === "Pending Review" && !isOverride && (!dayEng || !nightEng)) {
+        return alert("Both Day Shift Engineer Name and Night Shift Engineer Name are required. If one engineer is absent, click 'Single Shift / Absent Override'.");
+      }
+      if (targetStatus === "Pending Review" && isOverride && !dayEng && !nightEng) {
+        return alert("Please enter at least one Shift Engineer Name.");
+      }
+
+      const entries = {};
+      CHECKLIST_SECTIONS.forEach((sec, sIdx) => {
+        sec.items.forEach((_, iIdx) => {
+          const key = `s${sIdx}_i${iIdx}`;
+          entries[key] = {
+            d1: document.getElementById(`${key}_d1`).value,
+            d2: document.getElementById(`${key}_d2`).value,
+            n1: document.getElementById(`${key}_n1`).value,
+            n2: document.getElementById(`${key}_n2`).value,
+            rem: document.getElementById(`${key}_rem`).value
+          };
+        });
+      });
+
+      const payload = {
+        date: dateVal,
+        dayEngName: dayEng,
+        nightEngName: nightEng,
+        dayCompleted: document.getElementById("chkDayShift").checked || !!dayEng,
+        nightCompleted: document.getElementById("chkNightShift").checked || !!nightEng,
+        note1: document.getElementById("note1").value,
+        note2: document.getElementById("note2").value,
+        note3: document.getElementById("note3").value,
+        note4: document.getElementById("note4").value,
+        entries: entries,
+        status: targetStatus,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      try {
+        if (activeDocId) {
+          await db.collection("tict_daily_checklists").doc(activeDocId).update(payload);
+        } else {
+          await db.collection("tict_daily_checklists").add(payload);
+        }
+        alert(targetStatus === "Awaiting Night Shift"
+          ? "Day Shift saved! Night Shift Engineer can now open and complete this same sheet."
+          : "Checklist submitted to Reviewer!");
+        showDashboard();
+      } catch (err) {
+        alert("Error saving checklist: " + err.message);
+      }
+    }
+
+    async function updateApprovalStatus(newStatus) {
+      if (!activeDocId) return;
+      try {
+        await db.collection("tict_daily_checklists").doc(activeDocId).update({
+          status: newStatus,
+          ...(newStatus === "Pending Head Approval" ? { reviewerApprovedBy: currentUsername } : { headApprovedBy: currentUsername })
+        });
+        alert(`Checklist updated to: ${newStatus}`);
+        showDashboard();
+      } catch (err) {
+        alert("Approval failed: " + err.message);
+      }
+    }
+
+    // =========================================================================
+    // 6. LOCAL A4 PDF EXPORT (GENERATED IN BROWSER, NEVER SAVED IN CLOUD)
+    // =========================================================================
+    function downloadLocalPDF() {
+      const element = document.getElementById("printableSheet");
+      const dateStr = document.getElementById("fDate").value || "Daily";
+      const opt = {
+        margin: 0.25,
+        filename: `TICT_Shift_Checklist_${dateStr}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+  </script>
+</body>
+</html>
